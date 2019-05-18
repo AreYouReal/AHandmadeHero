@@ -2,29 +2,23 @@
 #include <stdint.h>
 #include <xinput.h>
 
-#define internal static 
-#define local_persist static
-#define global_variable static
-
-
 struct win32_offscreen_buffer {
-	BITMAPINFO info;
-	void* memory;
-	int width;
-	int height;
-	int pitch;
-	int bytesPerPixel;
+	// Pixels are always 32 bits wide. Littel endian 0x xx RR GG BB
+	BITMAPINFO	info;
+	void*		memory;
+	int			width;
+	int			height;
+	int			pitch;
 };
-
-// TODO: This is a global for now
-global_variable bool globalRunning;
-global_variable win32_offscreen_buffer globalBackBuffer;
-
 
 struct win32_window_dimension {
 	int width;
 	int height;
 };
+
+// TODO: This is a global for now
+static bool globalRunning;
+static win32_offscreen_buffer globalBackBuffer;
 
 win32_window_dimension
 GetWindowDimension(HWND window) {
@@ -39,7 +33,7 @@ GetWindowDimension(HWND window) {
 	return(result);
 }
 
-internal void
+static void
 WIN32RenderWeirdGradinent(win32_offscreen_buffer buffer, int xOffset, int yOffset) {
 
 	// TODO: Let's see waht the optimizer does
@@ -66,7 +60,7 @@ WIN32RenderWeirdGradinent(win32_offscreen_buffer buffer, int xOffset, int yOffse
 	}
 }
 
-internal void
+static void
 Win32ResizeDIBSection(win32_offscreen_buffer * buffer, int width, int height) {
 
 	if (buffer->memory) {
@@ -75,25 +69,27 @@ Win32ResizeDIBSection(win32_offscreen_buffer * buffer, int width, int height) {
 
 	buffer->width = width;
 	buffer->height = height;
-	buffer->bytesPerPixel = 4;
+	int bytesPerPixel = 4;
 
 	buffer->info.bmiHeader.biSize = sizeof(buffer->info.bmiHeader);
 	buffer->info.bmiHeader.biWidth = buffer->width;
-	buffer->info.bmiHeader.biHeight = -buffer->height;
+	buffer->info.bmiHeader.biHeight = -buffer->height; // Top to down Y (if + -> bottom to top Y value)
 	buffer->info.bmiHeader.biPlanes = 1;
 	buffer->info.bmiHeader.biBitCount = 32;
 	buffer->info.bmiHeader.biCompression = BI_RGB;
 
-	int bitmapMemorySize = buffer->bytesPerPixel * buffer->width * buffer->height;
+	int bitmapMemorySize = bytesPerPixel * buffer->width * buffer->height;
 	buffer->memory = VirtualAlloc(0, bitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
 
-	buffer->pitch = buffer->width * buffer->bytesPerPixel;
+	buffer->pitch = buffer->width * bytesPerPixel;
 	// TODO: Probably clear this to black
 }
 
-internal void
-Win32DisaplayBufferInWindow(HDC deviceContext, int windowWidth, int windowHeight, win32_offscreen_buffer buffer, int x, int y, int width, int height) {
+static void
+Win32DisaplayBufferInWindow(HDC deviceContext, int windowWidth, int windowHeight, 
+	win32_offscreen_buffer buffer ) {
 	// TODO: Aspect ration correction
+	// TODO: Play with stretches
 	StretchDIBits(deviceContext,
 		0, 0, windowWidth, windowHeight,
 		0, 0, buffer.width, buffer.height,
@@ -112,22 +108,18 @@ Win32MainWindowCallback(
 
 	LRESULT result = 0;
 	switch (Message) {
-	case WM_SIZE: {
-		// OutputDebugStringA("WM_SIZE\n");
+	case WM_ACTIVATEAPP: {
+		OutputDebugStringA("WM_ACTIVATEAPP\n");
 	}break;
 	case WM_DESTROY: {
 		// TODO: Handle this with an error
 		globalRunning = false;
-		OutputDebugStringA("WM_SIZE\n");
 	}break;
 	case WM_CLOSE: {
 		// TODO: Handle with amessage to the user
 		globalRunning = false;
-		OutputDebugStringA("WM_SIZE\n");
 	}break;
-	case WM_ACTIVATEAPP: {
-		OutputDebugStringA("WM_ACTIVATEAPP\n");
-	}break;
+
 	case WM_PAINT: {
 		PAINTSTRUCT paint;
 		HDC deviceContext = BeginPaint(Window, &paint);
@@ -137,10 +129,9 @@ Win32MainWindowCallback(
 		int height = paint.rcPaint.bottom - paint.rcPaint.top;
 		int width = paint.rcPaint.right - paint.rcPaint.left;
 
-
 		win32_window_dimension dimensions = GetWindowDimension(Window);
 
-		Win32DisaplayBufferInWindow(deviceContext, dimensions.width, dimensions.height, globalBackBuffer, x, y, width, height);
+		Win32DisaplayBufferInWindow(deviceContext, dimensions.width, dimensions.height, globalBackBuffer);
 
 		EndPaint(Window, &paint);
 	}break;
@@ -176,7 +167,7 @@ WinMain(
 			CreateWindowEx(
 				0,
 				windowClass.lpszClassName,
-				"Handmade Hero",
+				"A Handmade Hero",
 				WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 				CW_USEDEFAULT,
 				CW_USEDEFAULT,
@@ -218,7 +209,7 @@ WinMain(
 
 				WIN32RenderWeirdGradinent(globalBackBuffer, xOffset, yOffset);
 				win32_window_dimension dimensions = GetWindowDimension(window);
-				Win32DisaplayBufferInWindow(deviceContext, dimensions.width, dimensions.height, globalBackBuffer, 0, 0, dimensions.width, dimensions.height);
+				Win32DisaplayBufferInWindow(deviceContext, dimensions.width, dimensions.height, globalBackBuffer);
 
 				++xOffset;
 				++yOffset;
