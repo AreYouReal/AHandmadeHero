@@ -41,10 +41,12 @@ static x_input_set_state* XInputSetState_ = XInputSetStateStub;
 
 static void 
 Win32LoadXInput() {
-	HMODULE XInputLibrary = LoadLibrary("xinput1_3.dll");
+	HMODULE XInputLibrary = LoadLibraryA("xinput1_3.dll");
 	if (XInputLibrary) {
 		XInputGetState = (x_input_get_state*)GetProcAddress(XInputLibrary, "XInputGetState");
+		if (XInputGetState) { XInputGetState = XInputGetStateStub; }
 		XInputSetState = (x_input_set_state*)GetProcAddress(XInputLibrary, "XInputSetState");
+		if (XInputSetState) { XInputSetState = XInputSetStateStub; }
 	}
 }
 
@@ -62,13 +64,13 @@ GetWindowDimension(HWND window) {
 }
 
 static void
-WIN32RenderWeirdGradinent(win32_offscreen_buffer buffer, int xOffset, int yOffset) {
+WIN32RenderWeirdGradinent(win32_offscreen_buffer* buffer, int xOffset, int yOffset) {
 
 	// TODO: Let's see waht the optimizer does
-	uint8_t* row = (uint8_t*)buffer.memory;
-	for (int y = 0; y < buffer.height; ++y) {
+	uint8_t* row = (uint8_t*)buffer->memory;
+	for (int y = 0; y < buffer->height; ++y) {
 		uint32_t* pixel = (uint32_t*)row;
-		for (int x = 0; x < buffer.width; ++x) {
+		for (int x = 0; x < buffer->width; ++x) {
 			/*
 				Pixel in memory: RR GG BB xx
 				LITTLE ENDIAN: 0x xxBBGGRR
@@ -84,7 +86,7 @@ WIN32RenderWeirdGradinent(win32_offscreen_buffer buffer, int xOffset, int yOffse
 
 			*pixel++ = (green << 8 | blue);
 		}
-		row += buffer.pitch;
+		row += buffer->pitch;
 	}
 }
 
@@ -114,7 +116,8 @@ Win32ResizeDIBSection(win32_offscreen_buffer * buffer, int width, int height) {
 }
 
 static void
-Win32DisaplayBufferInWindow(HDC deviceContext, int windowWidth, int windowHeight, 
+Win32DisaplayBufferInWindow(HDC deviceContext, 
+	int windowWidth, int windowHeight, 
 	win32_offscreen_buffer buffer ) {
 	// TODO: Aspect ration correction
 	// TODO: Play with stretches
@@ -152,52 +155,42 @@ Win32MainWindowCallback(
 	case WM_SYSKEYUP:
 	case WM_KEYDOWN:
 	case WM_KEYUP: {
+
 		uint32_t VKCode = wParam;
 
 		bool WasDown = ((lParam & (1 << 30)) != 0);
-		bool IsDown = ((lParam & (1 << 31)) != 0);
+		bool IsDown = ((lParam & (1 << 31)) == 0);
 
 		if (WasDown != IsDown) {
 			if (VKCode == 'W') {
 				OutputDebugStringA("W ");
-			}
-			else if (VKCode == 'A') {
+			} else if (VKCode == 'A') {
 
-			}
-			else if (VKCode == 'S') {
+			} else if (VKCode == 'S') {
 
-			}
-			else if (VKCode == 'D') {
+			} else if (VKCode == 'D') {
 
-			}
-			else if (VKCode == 'Q') {
+			} else if (VKCode == 'Q') {
 
-			}
-			else if (VKCode == 'E') {
+			} else if (VKCode == 'E') {
 
-			}
-			else if (VKCode == VK_UP) {
+			} else if (VKCode == VK_UP) {
 
-			}
-			else if (VKCode == VK_LEFT) {
+			} else if (VKCode == VK_LEFT) {
 
-			}
-			else if (VKCode == VK_DOWN) {
+			} else if (VKCode == VK_DOWN) {
 
-			}
-			else if (VKCode == VK_RIGHT) {
+			} else if (VKCode == VK_RIGHT) {
 
-			}
-			else if (VKCode == VK_ESCAPE) {
+			} else if (VKCode == VK_ESCAPE) {
 				OutputDebugStringA("ESCAPE: ");
 				if (IsDown) {
-					OutputDebugStringA("isDown ");
+					OutputDebugStringA("isDown \n");
 				}
 				if (WasDown) {
 					OutputDebugStringA("WasDown\n");
 				}
-			}
-			else if (VKCode == VK_SPACE) {
+			} else if (VKCode == VK_SPACE) {
 
 			}
 		}
@@ -241,7 +234,7 @@ WinMain(
 ) {
 	Win32LoadXInput();
 
-	WNDCLASS windowClass = {};
+	WNDCLASSA windowClass = {};
 
 	Win32ResizeDIBSection(&globalBackBuffer, 1280, 720);
 
@@ -308,17 +301,20 @@ WinMain(
 						int16_t StickX = Pad->sThumbLX;
 						int16_t StickY = Pad->sThumbLY;
 
-						if (AButton) {
+						/*if (AButton) {
 							++yOffset;
-						}
-
+						}*/
+						//????
+						/*xOffset += StickX >> 15;
+						yOffset += StickY >> 15;
+*/
 
 					} else {
 						// NOTE: The controller is not available
 					}
 				}
 
-				WIN32RenderWeirdGradinent(globalBackBuffer, xOffset, yOffset);
+				WIN32RenderWeirdGradinent(&globalBackBuffer, xOffset, yOffset);
 				win32_window_dimension dimensions = GetWindowDimension(window);
 				Win32DisaplayBufferInWindow(deviceContext, dimensions.width, dimensions.height, globalBackBuffer);
 
