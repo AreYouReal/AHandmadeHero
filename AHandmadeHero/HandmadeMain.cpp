@@ -195,7 +195,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer * buffer, int width, int height) {
 	buffer->info.bmiHeader.biCompression = BI_RGB;
 
 	int bitmapMemorySize = bytesPerPixel * buffer->width * buffer->height;
-	buffer->memory = VirtualAlloc(0, bitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
+	buffer->memory = VirtualAlloc(0, bitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
 	buffer->pitch = buffer->width * bytesPerPixel;
 	// TODO: Probably clear this to black
