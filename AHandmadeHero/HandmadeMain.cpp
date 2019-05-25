@@ -88,8 +88,9 @@ Win32InitDSound(HWND Window, int32_t SamplesPerSecond, int32_t BufferSize) {
 				//STDMETHOD(CreateSoundBuffer)    (THIS_ _In_ LPCDSBUFFERDESC pcDSBufferDesc, _Outptr_ LPDIRECTSOUNDBUFFER * ppDSBuffer, _Pre_null_ LPUNKNOWN pUnkOuter) PURE;
 
 				DSBUFFERDESC BufferDescription = {};
+				BufferDescription.dwSize = sizeof(BufferDescription);
 				BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
-				BufferDescription.dwSize = 0;
+
 				// NOTE: "Create" a primary buffer
 				// TODO: DSBCAPS_GLOBALFOCUS
 				LPDIRECTSOUNDBUFFER PrimaryBuffer;
