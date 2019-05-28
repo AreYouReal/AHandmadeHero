@@ -439,6 +439,9 @@ WinMain(
 
 					DWORD ByteToLock = RunningSampleIndex * BytesPerSample % SecondaryBufferSize;
 					DWORD BytesToWrite;
+					if (ByteToLock == PlayCursor) {
+						BytesToWrite = SecondaryBufferSize;
+					}
 					if (ByteToLock > PlayCursor) {
 						BytesToWrite = SecondaryBufferSize - ByteToLock;
 						BytesToWrite += PlayCursor;
@@ -454,6 +457,8 @@ WinMain(
 					if (SUCCEEDED(GlobalSecondaryBuffer->Lock(ByteToLock, BytesToWrite, &Region1, &Region1Size, &Region2, &Region2Size, 0))) {
 
 						// TODO: ASsert tha Region1Size is valid (And Region2Size as well)
+						
+						// TODO: Collapse these two loops
 						DWORD Region1SampleCount = Region1Size / BytesPerSample;
 						int16_t* SampleOut = (int16_t*)Region1;
 						for (DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex) {
