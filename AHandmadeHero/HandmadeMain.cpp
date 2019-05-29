@@ -1,11 +1,15 @@
 #include <windows.h>
 #include <stdint.h>
 #include <xinput.h>
-
 #include <dsound.h>
+
+#include <math.h>
 
 // Just for fun %)
 #define ever (;;)
+
+typedef float real32;
+typedef double real64;
 
 struct win32_offscreen_buffer {
 	// Pixels are always 32 bits wide. Littel endian 0x xx RR GG BB
@@ -172,7 +176,7 @@ WIN32RenderWeirdGradinent(win32_offscreen_buffer* buffer, int xOffset, int yOffs
 				Pixel (32-bits)
 			*/
 
-			*pixel++ = (green << 8 | blue);
+			* pixel++ = (green << 8 | blue);
 		}
 		row += buffer->pitch;
 	}
@@ -204,9 +208,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer * buffer, int width, int height) {
 }
 
 static void
-Win32DisaplayBufferInWindow(HDC deviceContext, 
-	int windowWidth, int windowHeight, 
-	win32_offscreen_buffer buffer ) {
+Win32DisaplayBufferInWindow(HDC deviceContext, int windowWidth, int windowHeight, win32_offscreen_buffer buffer ) {
 	// TODO: Aspect ration correction
 	// TODO: Play with stretches
 	StretchDIBits(deviceContext,
@@ -218,12 +220,7 @@ Win32DisaplayBufferInWindow(HDC deviceContext,
 }
 
 LRESULT CALLBACK
-Win32MainWindowCallback(
-	HWND   Window,
-	UINT   Message,
-	WPARAM wParam,
-	LPARAM lParam
-) {
+Win32MainWindowCallback(HWND Window, UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	LRESULT result = 0;
 	switch (Message) {
@@ -318,12 +315,7 @@ Win32MainWindowCallback(
 }
 
 int _stdcall
-WinMain(
-	HINSTANCE Instance,
-	HINSTANCE PrevInstance,
-	LPSTR     commandLine,
-	int       ShowCode
-) {
+WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int ShowCode) {
 	Win32LoadXInput();
 
 	WNDCLASSA windowClass = {};
@@ -364,8 +356,8 @@ WinMain(
 			int ToneHz = 256;
 			int16_t ToneVolume = 3000;
 			uint32_t RunningSampleIndex = 0;
-			int SquareWavePeriod = SamplesPerSecond / ToneHz;
-			int HalfSquareWavePeriod = SquareWavePeriod / 2;
+			int WavePeriod = SamplesPerSecond / ToneHz;
+			int HalfWavePeriod = WavePeriod / 2;
 			int BytesPerSample = sizeof(int16_t) * 2;
 			int SecondaryBufferSize = SamplesPerSecond * BytesPerSample;
 
@@ -439,6 +431,7 @@ WinMain(
 
 					DWORD ByteToLock = RunningSampleIndex * BytesPerSample % SecondaryBufferSize;
 					DWORD BytesToWrite;
+					// TODO: We need a more accurate check than BytetoLock == PlayCursor
 					if (ByteToLock > PlayCursor) {
 						BytesToWrite = SecondaryBufferSize - ByteToLock;
 						BytesToWrite += PlayCursor;
@@ -457,7 +450,8 @@ WinMain(
 						DWORD Region1SampleCount = Region1Size / BytesPerSample;
 						int16_t* SampleOut = (int16_t*)Region1;
 						for (DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex) {
-							int16_t SampelValue = ((RunningSampleIndex++ / HalfSquareWavePeriod ) % 2) ? ToneVolume : -ToneVolume;
+							int16 SampleValue = ? ? ? ;
+							int16_t SampelValue = ((RunningSampleIndex++ / HalfWavePeriod ) % 2) ? ToneVolume : -ToneVolume;
 							*SampleOut++ = SampelValue;
 							*SampleOut++ = SampelValue;
 						}
@@ -465,7 +459,7 @@ WinMain(
 						DWORD Region2SampleCount = Region2Size / BytesPerSample;
 						SampleOut = (int16_t*)Region2;
 						for (DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex) {
-							int16_t SampelValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+							int16_t SampelValue = ((RunningSampleIndex++ / HalfWavePeriod) % 2) ? ToneVolume : -ToneVolume;
 							*SampleOut++ = SampelValue;
 							*SampleOut++ = SampelValue;
 						}
