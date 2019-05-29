@@ -450,6 +450,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 						DWORD Region1SampleCount = Region1Size / BytesPerSample;
 						int16_t* SampleOut = (int16_t*)Region1;
 						for (DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex) {
+							real32 SineValue = 
 							int16 SampleValue = ? ? ? ;
 							int16_t SampelValue = ((RunningSampleIndex++ / HalfWavePeriod ) % 2) ? ToneVolume : -ToneVolume;
 							*SampleOut++ = SampelValue;
