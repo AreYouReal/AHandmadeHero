@@ -6,16 +6,14 @@
 // TODO: Implement sine ourselves
 #include <math.h>
 
-// Just for fun %)
-#define ever (;;)
+#define ever (;;) // Just for fun %)
 #define Pi32 3.1459265359f
 
 typedef float real32;
 typedef double real64;
 
-
 struct win32_offscreen_buffer {
-	// Pixels are always 32 bits wide. Littel endian 0x xx RR GG BB
+	// Pixels are always 32 bits wide. Little endian 0x xx RR GG BB
 	BITMAPINFO	info;
 	void*		memory;
 	int			width;
@@ -58,6 +56,11 @@ static void
 Win32LoadXInput() {
 	// TODO: Test this on windows 8
 	HMODULE XInputLibrary = LoadLibraryA("xinput1_4.dll");
+
+	if (!XInputLibrary) {
+		XInputLibrary = LoadLibraryA("xinput9_1_0.dll");
+	}
+
 	if (!XInputLibrary) {
 		XInputLibrary = LoadLibraryA("xinput1_3.dll");
 	}
@@ -309,7 +312,7 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM wParam, LPARAM lParam)
 	}break;
 	default: {
 		// OutputDebugStringA("default\n");
-		result = DefWindowProc(Window, Message, wParam, lParam);
+		result = DefWindowProcA(Window, Message, wParam, lParam);
 	}
 			 break;
 	}
@@ -325,6 +328,8 @@ struct win32_sound_output {
 	int		WavePeriod;
 	int		BytesPerSample;
 	int		SecondaryBufferSize;
+	real32	tSine;
+	int		LatencySampleCount;
 };
 
 void
@@ -342,23 +347,23 @@ Win32FillSoundBuffer(win32_sound_output* SoundOutput, DWORD ByteToLock, DWORD By
 		DWORD Region1SampleCount = Region1Size / SoundOutput->BytesPerSample;
 		int16_t* SampleOut = (int16_t*)Region1;
 		for (DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex) {
-			// TODO: Draw this out for people
-			real32 t = 2.0f * Pi32 * (real32)SoundOutput->RunningSampleIndex / (real32)SoundOutput->WavePeriod;
-			real32 SineValue = sinf(t);
+			real32 SineValue = sinf(SoundOutput->tSine);
 			int16_t SampleValue = (int16_t)(SineValue * SoundOutput->ToneVolume);
 			*SampleOut++ = SampleValue;
 			*SampleOut++ = SampleValue;
+			SoundOutput->tSine += 2.0f * Pi32 * 1.0f / (real32)SoundOutput->WavePeriod;
 			++SoundOutput->RunningSampleIndex;
 		}
 
 		DWORD Region2SampleCount = Region2Size / SoundOutput->BytesPerSample;
 		SampleOut = (int16_t*)Region2;
 		for (DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex) {
-			real32 t = 2.0f * Pi32 * (real32)SoundOutput->RunningSampleIndex / (real32)SoundOutput->WavePeriod;
-			real32 SineValue = sinf(t);
+			real32 SineValue = sinf(SoundOutput->tSine);
 			int16_t SampleValue = (int16_t)(SineValue * SoundOutput->ToneVolume);
 			*SampleOut++ = SampleValue;
 			*SampleOut++ = SampleValue;
+
+			SoundOutput->tSine += 2.0f * Pi32 * 1.0f / (real32)SoundOutput->WavePeriod;
 			++SoundOutput->RunningSampleIndex;
 		}
 
@@ -403,7 +408,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 			int xOffset = 0;
 			int yOffset = 0;
 
-			// NOTE: Sound test
+			// NOTE: Sound test - Make this like sixty seconds ?
 			win32_sound_output SoundOutput = {};
 			SoundOutput.SamplesPerSecond = 48000;
 			SoundOutput.ToneHz = 256;
@@ -412,9 +417,10 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 			SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
 			SoundOutput.BytesPerSample = sizeof(int16_t) * 2;
 			SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
+			SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15.0f;
 
 			Win32InitDSound(window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
-			Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.SecondaryBufferSize);
+			Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample);
 			GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
 			globalRunning = true;
@@ -456,13 +462,20 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 						int16_t StickX = Pad->sThumbLX;
 						int16_t StickY = Pad->sThumbLY;
 
+						// TODO: We will do deadzone handling later using
+						// XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
+						// XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE
+
 						/*if (AButton) {
 							++yOffset;
 						}*/
-						//????
-						/*xOffset += StickX >> 15;
-						yOffset += StickY >> 15;
-*/
+						////????
+		/*				xOffset += StickX / 10000;
+						yOffset += StickY / 10000;*/
+
+						// TODO: Test it with XBox Controller
+						/*SoundOutput.ToneHz = 512 + (int)(256.0f * ((real32)StickY / 30000.0f));
+						SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;*/
 
 					} else {
 						// NOTE: The controller is not available
@@ -477,16 +490,15 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				DWORD WriteCursor;
 				if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor))) {
 					DWORD ByteToLock = (SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample) % SoundOutput.SecondaryBufferSize;
+					DWORD TargetCursor = (PlayCursor + (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample)) % SoundOutput.SecondaryBufferSize;
 					DWORD BytesToWrite;
 					// TODO: Change this to using a lower latency offset from the playcursor
 					// when we actually start having sound effects
-					if (ByteToLock == PlayCursor) {
-						BytesToWrite = 0;
-					}else if (ByteToLock > PlayCursor) {
+					if (ByteToLock > TargetCursor) {
 						BytesToWrite = SoundOutput.SecondaryBufferSize - ByteToLock;
-						BytesToWrite += PlayCursor;
+						BytesToWrite += TargetCursor;
 					} else {
-						BytesToWrite = PlayCursor - ByteToLock;
+						BytesToWrite = TargetCursor - ByteToLock;
 					}
 					
 					Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite);
