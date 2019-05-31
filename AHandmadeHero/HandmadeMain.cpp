@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <xinput.h>
 #include <dsound.h>
 
@@ -27,7 +28,7 @@ struct win32_window_dimension {
 };
 
 // TODO: This is a global for now
-static bool globalRunning;
+static bool GlobalRunning;
 static win32_offscreen_buffer globalBackBuffer;
 static LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 
@@ -235,11 +236,11 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM wParam, LPARAM lParam)
 	}break;
 	case WM_DESTROY: {
 		// TODO: Handle this with an error
-		globalRunning = false;
+		GlobalRunning = false;
 	}break;
 	case WM_CLOSE: {
 		// TODO: Handle with amessage to the user
-		globalRunning = false;
+		GlobalRunning = false;
 	}break;
 
 	case WM_SYSKEYDOWN:
@@ -286,12 +287,9 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM wParam, LPARAM lParam)
 			}
 			bool AltKeyWasDown = ( (lParam & (1 << 29)) != 0); 
 			if (VKCode == VK_F4 && AltKeyWasDown) {
-				globalRunning = false;
+				GlobalRunning = false;
 			}
 		}
-
-		
-		
 		
 	}break;
 
@@ -373,6 +371,11 @@ Win32FillSoundBuffer(win32_sound_output* SoundOutput, DWORD ByteToLock, DWORD By
 
 int _stdcall
 WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int ShowCode) {
+	
+	LARGE_INTEGER PerfCountFrequencyResult;
+	QueryPerformanceFrequency(&PerfCountFrequencyResult);
+	int64_t PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+
 	Win32LoadXInput();
 
 	WNDCLASSA windowClass = {};
@@ -423,16 +426,20 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 			Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample);
 			GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
-			globalRunning = true;
+			GlobalRunning = true;
 			
+			LARGE_INTEGER LastCounter;
+			QueryPerformanceCounter(&LastCounter);
+
+			uint64_t LastCycleCount = __rdtsc();
+
 			for ever{
-				if (!globalRunning) {
-					break;
-				}
+				if (!GlobalRunning) { break; }
+
 				MSG message;
 				while (PeekMessage(&message, 0, 0, 0, PM_REMOVE)) {
 					if (message.message == WM_QUIT) {
-						globalRunning = false;
+						GlobalRunning = false;
 					}
 					TranslateMessage(&message);
 					DispatchMessage(&message);
@@ -508,6 +515,28 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				win32_window_dimension dimensions = GetWindowDimension(window);
 				Win32DisaplayBufferInWindow(deviceContext, dimensions.width, dimensions.height, globalBackBuffer);
 
+				uint64_t EndCycleCount = __rdtsc();
+
+				LARGE_INTEGER EndCounter;
+				QueryPerformanceCounter(&EndCounter);
+
+
+
+				// TODO: Display the value here
+				uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
+
+				int64_t CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+				float MSPerFrame = ((1000.0f * (float)CounterElapsed) / (float)PerfCountFrequency);
+				float FPS = ((float)PerfCountFrequency / (float)CounterElapsed);
+				float MCPF = (float)CyclesElapsed / 1000000.0f;
+
+
+				char Buffer[256];
+				sprintf_s(Buffer, " %.02fms/f,  %.02ff/s,  %.02fMc/f  \n", MSPerFrame, FPS, MCPF);
+				OutputDebugStringA(Buffer);
+
+				LastCounter = EndCounter;
+				LastCycleCount = EndCycleCount;
 			}
 		} else {
 			// TODO: Logging
