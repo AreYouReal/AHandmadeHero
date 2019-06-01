@@ -90,9 +90,9 @@ Win32LoadXInput() {
 
 	if (XInputLibrary) {
 		XInputGetState = (x_input_get_state*)GetProcAddress(XInputLibrary, "XInputGetState");
-		if (XInputGetState) { XInputGetState = XInputGetStateStub; }
+		if (!XInputGetState) { XInputGetState = XInputGetStateStub; }
 		XInputSetState = (x_input_set_state*)GetProcAddress(XInputLibrary, "XInputSetState");
-		if (XInputSetState) { XInputSetState = XInputSetStateStub; }
+		if (!XInputSetState) { XInputSetState = XInputSetStateStub; }
 	} else {
 		// TODO: Diagnostic
 	}
@@ -494,16 +494,16 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 						// XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
 						// XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE
 
-						/*if (AButton) {
-							++yOffset;
-						}*/
+						//if (AButton) {
+						//	++yOffset;
+						//}
 						////????
 		/*				xOffset += StickX / 10000;
 						yOffset += StickY / 10000;*/
 
 						// TODO: Test it with XBox Controller
-						/*SoundOutput.ToneHz = 512 + (int)(256.0f * ((real32)StickY / 30000.0f));
-						SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;*/
+						//SoundOutput.ToneHz = 512 + (int)(256.0f * ((real32)StickY / 30000.0f));
+						//SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
 
 					} else {
 						// NOTE: The controller is not available
@@ -552,9 +552,9 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				float MCPF = (float)CyclesElapsed / 1000000.0f;
 
 
-				char Buffer[256];
-				sprintf_s(Buffer, " %.02fms/f,  %.02ff/s,  %.02fMc/f  \n", MSPerFrame, FPS, MCPF);
-				OutputDebugStringA(Buffer);
+				//char Buffer[256];
+				//sprintf_s(Buffer, " %.02fms/f,  %.02ff/s,  %.02fMc/f  \n", MSPerFrame, FPS, MCPF);
+				//OutputDebugStringA(Buffer);
 
 				LastCounter = EndCounter;
 				LastCycleCount = EndCycleCount;
