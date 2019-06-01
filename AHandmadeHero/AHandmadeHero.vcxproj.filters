@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="HandmadeMain.cpp">
+    <ClCompile Include="Win32_HandmadeMain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

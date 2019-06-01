@@ -494,16 +494,16 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 						// XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
 						// XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE
 
-						if (AButton) {
+						/*if (AButton) {
 							++yOffset;
-						}
+						}*/
 						////????
-						xOffset += StickX;
-						yOffset += StickY;
+		/*				xOffset += StickX / 10000;
+						yOffset += StickY / 10000;*/
 
 						// TODO: Test it with XBox Controller
-						SoundOutput.ToneHz = 512 + (int)(256.0f * ((real32)StickY / 30000.0f));
-						SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
+						/*SoundOutput.ToneHz = 512 + (int)(256.0f * ((real32)StickY / 30000.0f));
+						SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;*/
 
 					} else {
 						// NOTE: The controller is not available
