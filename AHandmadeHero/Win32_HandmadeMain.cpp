@@ -28,6 +28,9 @@
 // TODO: Implement sine ourselves
 #include <math.h>
 
+// Handmade headers
+#include "AHandmade.h"
+
 #define ever (;;) // Just for fun %)
 #define Pi32 3.1459265359f
 
@@ -183,32 +186,6 @@ GetWindowDimension(HWND window) {
 	return(result);
 }
 
-static void
-WIN32RenderWeirdGradinent(win32_offscreen_buffer* buffer, int xOffset, int yOffset) {
-
-	// TODO: Let's see waht the optimizer does
-	uint8_t* row = (uint8_t*)buffer->memory;
-	for (int y = 0; y < buffer->height; ++y) {
-		uint32_t* pixel = (uint32_t*)row;
-		for (int x = 0; x < buffer->width; ++x) {
-			/*
-				Pixel in memory: RR GG BB xx
-				LITTLE ENDIAN: 0x xxBBGGRR
-				BIG ENDIAN: 0x RRGGBBxx
-			*/
-			uint8_t blue = x + xOffset;
-			uint8_t green = y + yOffset;
-			/*
-				Memory: 	BB GG RR xx
-				Register:	xx RR GG BB (little endian)
-				Pixel (32-bits)
-			*/
-
-			* pixel++ = (green << 8 | blue);
-		}
-		row += buffer->pitch;
-	}
-}
 
 static void
 Win32ResizeDIBSection(win32_offscreen_buffer * buffer, int width, int height) {
@@ -304,7 +281,7 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM wParam, LPARAM lParam)
 					OutputDebugStringA("WasDown\n");
 				}
 			} else if (VKCode == VK_SPACE) {
-
+			
 			}
 			bool AltKeyWasDown = ( (lParam & (1 << 29)) != 0); 
 			if (VKCode == VK_F4 && AltKeyWasDown) {
@@ -494,23 +471,26 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 						// XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
 						// XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE
 
-						//if (AButton) {
-						//	++yOffset;
-						//}
-						////????
-		/*				xOffset += StickX / 10000;
-						yOffset += StickY / 10000;*/
-
-						// TODO: Test it with XBox Controller
-						//SoundOutput.ToneHz = 512 + (int)(256.0f * ((real32)StickY / 30000.0f));
-						//SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
+						if (AButton) {
+							++yOffset;
+						}
+						xOffset += StickX / 10000;
+						yOffset += StickY / 10000;
+						SoundOutput.ToneHz = 512 + (int)(256.0f * ((real32)StickY / 30000.0f));
+						SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
 
 					} else {
 						// NOTE: The controller is not available
 					}
 				}
 
-				WIN32RenderWeirdGradinent(&globalBackBuffer, xOffset, yOffset);
+				game_offscreen_buffer Buffer = {};
+				Buffer.memory = globalBackBuffer.memory;
+				Buffer.width = globalBackBuffer.width;
+				Buffer.height = globalBackBuffer.height;
+				Buffer.pitch = globalBackBuffer.pitch;
+				GameUpdateAndRender(&Buffer, xOffset, yOffset);
+				//WIN32RenderWeirdGradinent(&globalBackBuffer, xOffset, yOffset);
 
 				// NOTE: Direct sound output test
 
@@ -520,8 +500,6 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 					DWORD ByteToLock = (SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample) % SoundOutput.SecondaryBufferSize;
 					DWORD TargetCursor = (PlayCursor + (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample)) % SoundOutput.SecondaryBufferSize;
 					DWORD BytesToWrite;
-					// TODO: Change this to using a lower latency offset from the playcursor
-					// when we actually start having sound effects
 					if (ByteToLock > TargetCursor) {
 						BytesToWrite = SoundOutput.SecondaryBufferSize - ByteToLock;
 						BytesToWrite += TargetCursor;
@@ -542,10 +520,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				QueryPerformanceCounter(&EndCounter);
 
 
-
-				// TODO: Display the value here
 				uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
-
 				int64_t CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
 				float MSPerFrame = ((1000.0f * (float)CounterElapsed) / (float)PerfCountFrequency);
 				float FPS = ((float)PerfCountFrequency / (float)CounterElapsed);

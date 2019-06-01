@@ -127,7 +127,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AHandmade.cpp" />
     <ClCompile Include="Win32_HandmadeMain.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AHandmade.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
