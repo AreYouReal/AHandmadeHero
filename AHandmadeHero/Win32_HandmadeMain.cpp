@@ -19,6 +19,12 @@
 
 */
 
+#define ever (;;) // Just for fun %)
+#define Pi32 3.1459265359f
+
+typedef float real32;
+typedef double real64;
+
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -28,14 +34,8 @@
 // TODO: Implement sine ourselves
 #include <math.h>
 
-// Handmade headers
-#include "AHandmade.h"
-
-#define ever (;;) // Just for fun %)
-#define Pi32 3.1459265359f
-
-typedef float real32;
-typedef double real64;
+// Handmade headers	
+#include "AHandmade.cpp"
 
 struct win32_offscreen_buffer {
 	// Pixels are always 32 bits wide. Little endian 0x xx RR GG BB
