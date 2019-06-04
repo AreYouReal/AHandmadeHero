@@ -19,6 +19,9 @@
 
 */
 
+// TODO: Implement sine ourselves
+#include <math.h>
+
 #define ever (;;) // Just for fun %)
 #define Pi32 3.1459265359f
 
@@ -31,8 +34,7 @@ typedef double real64;
 #include <xinput.h>
 #include <dsound.h>
 
-// TODO: Implement sine ourselves
-#include <math.h>
+
 
 // Handmade headers	
 #include "AHandmade.cpp"
@@ -328,8 +330,25 @@ struct win32_sound_output {
 	int		LatencySampleCount;
 };
 
+static void
+Win32ClearBuffer(win32_sound_output* SoundOutput) {
+	VOID* Region1;
+	DWORD Region1Size;
+	VOID* Region2;
+	DWORD Region2Size;
+	if (SUCCEEDED(GlobalSecondaryBuffer->Lock(0, SoundOutput->SecondaryBufferSize, &Region1, &Region1Size, &Region2, &Region2Size, 0))) {
+		int8_t* DestSample = (int8_t*)Region1;
+		for (DWORD ByteIndex = 0; ByteIndex < Region1Size; ++ByteIndex) { *DestSample++ = 0; }
+
+		DestSample = (int8_t*)Region2;
+		for (DWORD ByteIndex = 0; ByteIndex < Region2Size; ++ByteIndex) { *DestSample++ = 0; }
+	}
+
+	GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
+}
+
 void
-Win32FillSoundBuffer(win32_sound_output* SoundOutput, DWORD ByteToLock, DWORD BytesToWrite ) {
+Win32FillSoundBuffer(win32_sound_output* SoundOutput, DWORD ByteToLock, DWORD BytesToWrite, game_sound_output_buffer* SourceBuffer ) {
 	VOID* Region1;
 	DWORD Region1Size;
 	VOID* Region2;
@@ -341,25 +360,20 @@ Win32FillSoundBuffer(win32_sound_output* SoundOutput, DWORD ByteToLock, DWORD By
 
 		// TODO: Collapse these two loops
 		DWORD Region1SampleCount = Region1Size / SoundOutput->BytesPerSample;
-		int16_t* SampleOut = (int16_t*)Region1;
+		int16_t* DestSample = (int16_t*)Region1;
+		int16_t* SourceSample = SourceBuffer->Samples;
+
 		for (DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex) {
-			real32 SineValue = sinf(SoundOutput->tSine);
-			int16_t SampleValue = (int16_t)(SineValue * SoundOutput->ToneVolume);
-			*SampleOut++ = SampleValue;
-			*SampleOut++ = SampleValue;
-			SoundOutput->tSine += 2.0f * Pi32 * 1.0f / (real32)SoundOutput->WavePeriod;
+			*DestSample++ = *SourceSample++;
+			*DestSample++ = *SourceSample++;
 			++SoundOutput->RunningSampleIndex;
 		}
 
 		DWORD Region2SampleCount = Region2Size / SoundOutput->BytesPerSample;
-		SampleOut = (int16_t*)Region2;
+		DestSample = (int16_t*)Region2;
 		for (DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex) {
-			real32 SineValue = sinf(SoundOutput->tSine);
-			int16_t SampleValue = (int16_t)(SineValue * SoundOutput->ToneVolume);
-			*SampleOut++ = SampleValue;
-			*SampleOut++ = SampleValue;
-
-			SoundOutput->tSine += 2.0f * Pi32 * 1.0f / (real32)SoundOutput->WavePeriod;
+			*DestSample++ = *SourceSample++;
+			*DestSample++ = *SourceSample++;
 			++SoundOutput->RunningSampleIndex;
 		}
 
@@ -421,7 +435,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 			SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15.0f;
 
 			Win32InitDSound(window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
-			Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample);
+			Win32ClearBuffer(&SoundOutput);
 			GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
 			GlobalRunning = true;
@@ -484,31 +498,44 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 					}
 				}
 
+
+				DWORD PlayCursor;
+				DWORD WriteCursor;
+				DWORD ByteToLock;
+				DWORD TargetCursor;
+				DWORD BytesToWrite;
+				bool SoundIsValid = false;
+				if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor))) {
+					ByteToLock = (SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample) % SoundOutput.SecondaryBufferSize;
+					TargetCursor = (PlayCursor + (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample)) % SoundOutput.SecondaryBufferSize;
+					if (ByteToLock > TargetCursor) {
+						BytesToWrite = SoundOutput.SecondaryBufferSize - ByteToLock;
+						BytesToWrite += TargetCursor;
+					}
+					else {
+						BytesToWrite = TargetCursor - ByteToLock;
+					}
+					SoundIsValid = true;
+				}
+
+				int16_t Samples[48000 * 2];
+				game_sound_output_buffer SoundBuffer = {};
+				SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
+				SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
+				SoundBuffer.Samples = Samples;
+
 				game_offscreen_buffer Buffer = {};
 				Buffer.memory = globalBackBuffer.memory;
 				Buffer.width = globalBackBuffer.width;
 				Buffer.height = globalBackBuffer.height;
 				Buffer.pitch = globalBackBuffer.pitch;
-				GameUpdateAndRender(&Buffer, xOffset, yOffset);
+				GameUpdateAndRender(&Buffer, xOffset, yOffset, &SoundBuffer);
 				//WIN32RenderWeirdGradinent(&globalBackBuffer, xOffset, yOffset);
 
 				// NOTE: Direct sound output test
 
-				DWORD PlayCursor;
-				DWORD WriteCursor;
-				if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor))) {
-					DWORD ByteToLock = (SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample) % SoundOutput.SecondaryBufferSize;
-					DWORD TargetCursor = (PlayCursor + (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample)) % SoundOutput.SecondaryBufferSize;
-					DWORD BytesToWrite;
-					if (ByteToLock > TargetCursor) {
-						BytesToWrite = SoundOutput.SecondaryBufferSize - ByteToLock;
-						BytesToWrite += TargetCursor;
-					} else {
-						BytesToWrite = TargetCursor - ByteToLock;
-					}
-					
-					Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite);
-
+				if (SoundIsValid) {
+					Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
 				}
 
 				win32_window_dimension dimensions = GetWindowDimension(window);
