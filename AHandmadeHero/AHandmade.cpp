@@ -6,10 +6,9 @@
 #include "AHandmade.h"
 
 static void
-GameOutputSound(game_sound_output_buffer* SoundBuffer ) {
+GameOutputSound(game_sound_output_buffer* SoundBuffer, int ToneHz ) {
 	static float tSine;
 	int16_t ToneVolume = 3000; 
-	int ToneHz = 256;
 	int WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
 
 	int16_t* SampleOut = SoundBuffer->Samples;
@@ -48,8 +47,8 @@ RenderWeirdGradinent(game_offscreen_buffer* Buffer, int BlueOffset, int GreenOff
 	}
 }
 
-void GameUpdateAndRender(game_offscreen_buffer* Buffer, int BlueOffset, int GreenOffset, game_sound_output_buffer* SoundBuffer){
+void GameUpdateAndRender(game_offscreen_buffer* Buffer, int BlueOffset, int GreenOffset, game_sound_output_buffer* SoundBuffer, int ToneHz){
 	// TODO: Allow sample offsets here for more robust platform options
-	GameOutputSound(SoundBuffer);
+	GameOutputSound(SoundBuffer, ToneHz);
 	RenderWeirdGradinent(Buffer, BlueOffset, GreenOffset);
 }

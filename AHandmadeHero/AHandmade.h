@@ -33,4 +33,4 @@ struct game_sound_output_buffer {
 };
 
 // Three things - timing, Controller/keyboard input, bitmap buffer to use, sound buffer to use
-static void GameUpdateAndRender(game_offscreen_buffer* Buffer, int BlueOffset, int GreenOffset, game_sound_output_buffer* SoundBuffer);
+static void GameUpdateAndRender(game_offscreen_buffer* Buffer, int BlueOffset, int GreenOffset, game_sound_output_buffer* SoundBuffer, int ToneHz);

@@ -31,8 +31,10 @@ typedef double real64;
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <malloc.h>
 #include <xinput.h>
 #include <dsound.h>
+
 
 
 
@@ -440,6 +442,9 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 
 			GlobalRunning = true;
 			
+
+			int16_t* Samples = (int16_t*)VirtualAlloc(0, SoundOutput.SecondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
 			LARGE_INTEGER LastCounter;
 			QueryPerformanceCounter(&LastCounter);
 
@@ -518,7 +523,6 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 					SoundIsValid = true;
 				}
 
-				int16_t Samples[48000 * 2];
 				game_sound_output_buffer SoundBuffer = {};
 				SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
 				SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
@@ -529,7 +533,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				Buffer.width = globalBackBuffer.width;
 				Buffer.height = globalBackBuffer.height;
 				Buffer.pitch = globalBackBuffer.pitch;
-				GameUpdateAndRender(&Buffer, xOffset, yOffset, &SoundBuffer);
+				GameUpdateAndRender(&Buffer, xOffset, yOffset, &SoundBuffer, SoundOutput.ToneHz);
 				//WIN32RenderWeirdGradinent(&globalBackBuffer, xOffset, yOffset);
 
 				// NOTE: Direct sound output test
