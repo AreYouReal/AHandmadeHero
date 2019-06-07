@@ -428,7 +428,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 			// NOTE: Sound test - Make this like sixty seconds ?
 			win32_sound_output SoundOutput = {};
 			SoundOutput.SamplesPerSecond = 48000;
-			SoundOutput.ToneHz = 256;
+			SoundOutput.ToneHz = 256; 
 			SoundOutput.ToneVolume = 3000;
 			SoundOutput.RunningSampleIndex = 0;
 			SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
@@ -504,11 +504,11 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				}
 
 
-				DWORD PlayCursor;
-				DWORD WriteCursor;
-				DWORD ByteToLock;
-				DWORD TargetCursor;
-				DWORD BytesToWrite;
+				DWORD PlayCursor = 0;
+				DWORD WriteCursor = 0;
+				DWORD ByteToLock = 0;
+				DWORD TargetCursor = 0;
+				DWORD BytesToWrite = 0;
 				bool SoundIsValid = false;
 				// TODO: Tighten sound logic so that we know where we should be 
 				// writing to and can anticipate the time spent in the game update
