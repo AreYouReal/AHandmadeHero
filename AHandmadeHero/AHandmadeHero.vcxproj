@@ -132,6 +132,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AHandmade.h" />
+    <ClInclude Include="Win32_Handmade.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

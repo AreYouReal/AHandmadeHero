@@ -47,7 +47,17 @@ RenderWeirdGradinent(game_offscreen_buffer* Buffer, int BlueOffset, int GreenOff
 	}
 }
 
-void GameUpdateAndRender(game_offscreen_buffer* Buffer, int BlueOffset, int GreenOffset, game_sound_output_buffer* SoundBuffer, int ToneHz){
+void GameUpdateAndRender(game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer){
+	static int BlueOffset = 0;
+	static int GreenOffset = 0;
+	static int ToneHz = 256;
+
+	//if (Input.IsAnalog) {
+	//	// TODO: Use analog movement tuning
+	//} else {
+	//	// TODO: Use digital movement tuning
+	//}
+
 	// TODO: Allow sample offsets here for more robust platform options
 	GameOutputSound(SoundBuffer, ToneHz);
 	RenderWeirdGradinent(Buffer, BlueOffset, GreenOffset);

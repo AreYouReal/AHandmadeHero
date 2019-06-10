@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdint.h>
 
 /*
 	TODO: Services that the platform layer provides to the game
@@ -29,8 +30,7 @@ struct game_sound_output_buffer {
 	int SamplesPerSecond;
 	int SampleCount;
 	int16_t* Samples;
-
 };
 
 // Three things - timing, Controller/keyboard input, bitmap buffer to use, sound buffer to use
-static void GameUpdateAndRender(game_offscreen_buffer* Buffer, int BlueOffset, int GreenOffset, game_sound_output_buffer* SoundBuffer, int ToneHz);
+static void GameUpdateAndRender(game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer);

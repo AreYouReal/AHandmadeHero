@@ -26,5 +26,8 @@
     <ClInclude Include="AHandmade.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Win32_Handmade.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

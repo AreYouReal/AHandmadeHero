@@ -28,6 +28,10 @@
 typedef float real32;
 typedef double real64;
 
+// Handmade headers	
+#include "AHandmade.h"
+#include "AHandmade.cpp"
+
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -35,25 +39,7 @@ typedef double real64;
 #include <xinput.h>
 #include <dsound.h>
 
-
-
-
-// Handmade headers	
-#include "AHandmade.cpp"
-
-struct win32_offscreen_buffer {
-	// Pixels are always 32 bits wide. Little endian 0x xx RR GG BB
-	BITMAPINFO	info;
-	void*		memory;
-	int			width;
-	int			height;
-	int			pitch;
-};
-
-struct win32_window_dimension {
-	int width;
-	int height;
-};
+#include "Win32_Handmade.h"
 
 // TODO: This is a global for now
 static bool GlobalRunning;
@@ -320,18 +306,6 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM wParam, LPARAM lParam)
 	return(result);
 }
 
-struct win32_sound_output {
-	int		SamplesPerSecond;
-	int		ToneHz;
-	int16_t ToneVolume;
-	uint32_t RunningSampleIndex;
-	int		WavePeriod;
-	int		BytesPerSample;
-	int		SecondaryBufferSize;
-	real32	tSine;
-	int		LatencySampleCount;
-};
-
 static void
 Win32ClearBuffer(win32_sound_output* SoundOutput) {
 	VOID* Region1;
@@ -421,17 +395,10 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 
 			HDC deviceContext = GetDC(window);
 
-			// NOTE: Graphics test
-			int xOffset = 0;
-			int yOffset = 0;
-
 			// NOTE: Sound test - Make this like sixty seconds ?
 			win32_sound_output SoundOutput = {};
 			SoundOutput.SamplesPerSecond = 48000;
-			SoundOutput.ToneHz = 256; 
-			SoundOutput.ToneVolume = 3000;
 			SoundOutput.RunningSampleIndex = 0;
-			SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
 			SoundOutput.BytesPerSample = sizeof(int16_t) * 2;
 			SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
 			SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15.0f;
@@ -489,15 +456,6 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 						// TODO: We will do deadzone handling later using
 						// XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
 						// XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE
-
-						if (AButton) {
-							++yOffset;
-						}
-						xOffset += StickX / 10000;
-						yOffset += StickY / 10000;
-						SoundOutput.ToneHz = 512 + (int)(256.0f * ((real32)StickY / 30000.0f));
-						SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
-
 					} else {
 						// NOTE: The controller is not available
 					}
@@ -535,7 +493,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				Buffer.width = globalBackBuffer.width;
 				Buffer.height = globalBackBuffer.height;
 				Buffer.pitch = globalBackBuffer.pitch;
-				GameUpdateAndRender(&Buffer, xOffset, yOffset, &SoundBuffer, SoundOutput.ToneHz);
+				GameUpdateAndRender(&Buffer, &SoundBuffer);
 				//WIN32RenderWeirdGradinent(&globalBackBuffer, xOffset, yOffset);
 
 				// NOTE: Direct sound output test
