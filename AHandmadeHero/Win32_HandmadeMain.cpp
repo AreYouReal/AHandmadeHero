@@ -16,7 +16,7 @@
 	- GetKEyboardLayout (for French keyboard, international WASD support)
 
 	Just a partial list of stuf!!!
-
+		
 */
 
 // TODO: Implement sine ourselves
@@ -323,7 +323,7 @@ Win32ClearBuffer(win32_sound_output* SoundOutput) {
 	GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
 }
 
-void
+static void
 Win32FillSoundBuffer(win32_sound_output* SoundOutput, DWORD ByteToLock, DWORD BytesToWrite, game_sound_output_buffer* SourceBuffer ) {
 	VOID* Region1;
 	DWORD Region1Size;
@@ -355,6 +355,12 @@ Win32FillSoundBuffer(win32_sound_output* SoundOutput, DWORD ByteToLock, DWORD By
 
 		GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
 	}
+}
+
+static void 
+Win32ProcessXInputDigitalButton(DWORD XInputButtonState, game_button_state* OldState, DWORD ButtonBit, game_button_state* Newstate) {
+	Newstate->EndedDown = (( XInputButtonState & ButtonBit) == ButtonBit);
+	Newstate->HalfTransitionCount = (OldState->EndedDown != Newstate->EndedDown) ? 1 : 0;
 }
 
 int _stdcall
@@ -412,6 +418,11 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 			// TODO: Pool with bitmap VirtualAlloc
 			int16_t* Samples = (int16_t*)VirtualAlloc(0, SoundOutput.SecondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
+
+			game_input Input[2];
+			game_input* NewInput = &Input[0];
+			game_input* OldInput = &Input[1];
+
 			LARGE_INTEGER LastCounter;
 			QueryPerformanceCounter(&LastCounter);
 
@@ -421,6 +432,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				if (!GlobalRunning) { break; }
 
 				MSG message;
+
 				while (PeekMessage(&message, 0, 0, 0, PM_REMOVE)) {
 					if (message.message == WM_QUIT) {
 						GlobalRunning = false;
@@ -430,32 +442,65 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				}
 
 				// TODO: Should we pull this more frequently
-				for (DWORD controllerIndex = 0; controllerIndex < XUSER_MAX_COUNT; ++controllerIndex) {
+				int MaxControllerCount = XUSER_MAX_COUNT;
+				if (MaxControllerCount > ArrayCount(NewInput->Controllers)) {
+					MaxControllerCount = ArrayCount(NewInput->Controllers);
+				}
+				for (DWORD ControllerIndex = 0; ControllerIndex < MaxControllerCount; ++ControllerIndex) {
+
+
+					game_controller_input* OldController = &OldInput->Controllers[ControllerIndex];
+					game_controller_input* NewController = &NewInput->Controllers[ControllerIndex];
+
 					XINPUT_STATE controllerState;
-					if (XInputGetState(controllerIndex, &controllerState) == ERROR_SUCCESS) {
+					if (XInputGetState(ControllerIndex, &controllerState) == ERROR_SUCCESS) {
 						// NOTE: This Controller is plugged in
 						// TODO: See if ControllerState.dwPacketNUmber increments too rapidly
 						XINPUT_GAMEPAD* Pad = &controllerState.Gamepad;
+						
+						// TODO: DPad
 						bool Up = Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP;
 						bool Down = Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN;
 						bool Left = Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT;
 						bool Right = Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT;
-						bool Start = Pad->wButtons & XINPUT_GAMEPAD_START;
-						bool Back = Pad->wButtons & XINPUT_GAMEPAD_BACK;
 
-						bool LeftShoulder = Pad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER;
-						bool RightShoulder = Pad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER;
-						bool AButton = Pad->wButtons & XINPUT_GAMEPAD_A;
-						bool BButton = Pad->wButtons & XINPUT_GAMEPAD_B;
-						bool XButton = Pad->wButtons & XINPUT_GAMEPAD_X;
-						bool YButton = Pad->wButtons & XINPUT_GAMEPAD_Y;
-
-						int16_t StickX = Pad->sThumbLX;
-						int16_t StickY = Pad->sThumbLY;
+						NewController->IsAnalog = true;
+						NewController->StartX = OldController->EndX;
+						NewController->StartY = OldController->EndY;
 
 						// TODO: We will do deadzone handling later using
 						// XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
 						// XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE
+						// TODO: Min/Max macros???
+						float X;
+						if (Pad->sThumbLX < 0) {
+							X = (float)Pad->sThumbLX / 32768.0f;
+						} else {
+							X = (float)Pad->sThumbLX / 32767.0f;
+						}
+						NewController->MinX = NewController->MaxX = NewController->EndX = X;
+
+
+						float Y;
+						if (Pad->sThumbLY < 0) {
+							Y = (float)Pad->sThumbLY / 32768.0f;
+						} else {
+							Y = (float)Pad->sThumbLY / 32767.0f;
+						}
+						NewController->MinY = NewController->MaxY = NewController->EndY = Y;
+						
+
+						Win32ProcessXInputDigitalButton(Pad->wButtons, &OldController->Down, XINPUT_GAMEPAD_A, &NewController->Down);
+						Win32ProcessXInputDigitalButton(Pad->wButtons, &OldController->Right, XINPUT_GAMEPAD_B, &NewController->Right);
+						Win32ProcessXInputDigitalButton(Pad->wButtons, &OldController->Left, XINPUT_GAMEPAD_X, &NewController->Left);
+						Win32ProcessXInputDigitalButton(Pad->wButtons, &OldController->Up, XINPUT_GAMEPAD_Y, &NewController->Up);
+						Win32ProcessXInputDigitalButton(Pad->wButtons, &OldController->LeftShoulder, XINPUT_GAMEPAD_LEFT_SHOULDER, &NewController->LeftShoulder);
+						Win32ProcessXInputDigitalButton(Pad->wButtons, &OldController->RightShoulder, XINPUT_GAMEPAD_RIGHT_SHOULDER, &NewController->RightShoulder);
+
+						/*bool Start = Pad->wButtons & XINPUT_GAMEPAD_START;
+						bool Back = Pad->wButtons & XINPUT_GAMEPAD_BACK;
+*/
+
 					} else {
 						// NOTE: The controller is not available
 					}
@@ -493,7 +538,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				Buffer.width = globalBackBuffer.width;
 				Buffer.height = globalBackBuffer.height;
 				Buffer.pitch = globalBackBuffer.pitch;
-				GameUpdateAndRender(&Buffer, &SoundBuffer);
+				GameUpdateAndRender(NewInput, &Buffer, &SoundBuffer);
 				//WIN32RenderWeirdGradinent(&globalBackBuffer, xOffset, yOffset);
 
 				// NOTE: Direct sound output test
@@ -524,6 +569,11 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 
 				LastCounter = EndCounter;
 				LastCycleCount = EndCycleCount;
+
+				game_input* Temp = NewInput;
+				NewInput = OldInput;
+				OldInput = Temp;
+				// TODO: Shpuld i clear this here?
 			}
 		} else {
 			// TODO: Logging
