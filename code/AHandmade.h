@@ -4,6 +4,11 @@
 
 // TODO: Swap, min, max ... MACROS???
 
+
+#define Kilobytes(Value) ((Value) * 1024)
+#define Megabytes(Value) (Kilobytes(Value) * 1024)
+#define Gigabytes(Value) (Megabytes(Value) * 1024)
+
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
 /*
@@ -70,5 +75,23 @@ struct game_input {
 	game_controller_input Controllers[4];
 };
 
+
+struct game_memory{
+	bool 		IsInitialized;
+	uint64_t 	PermanentStorageSpace;
+	void*		PermanentStorage;
+
+};
+
 // Three things - timing, Controller/keyboard input, bitmap buffer to use, sound buffer to use
-static void GameUpdateAndRender(game_input* Input, game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer);
+static void GameUpdateAndRender(game_memory *GameMemory, game_input* Input, game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer);
+
+////
+///
+//
+
+struct game_state{
+	int ToneHz;
+	int GreenOffset;
+	int BlueOffset;
+};

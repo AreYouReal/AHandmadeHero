@@ -419,6 +419,10 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 			int16_t* Samples = (int16_t*)VirtualAlloc(0, SoundOutput.SecondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
 
+			game_memory GameMemory = {};
+			GameMemory.PermanentStorageSpace = Megabytes(64);
+			GameMemory.PermanentStorage = VirtualAlloc(0, GameMemory.PermanentStorageSpace, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
 			game_input Input[2];
 			game_input* NewInput = &Input[0];
 			game_input* OldInput = &Input[1];
@@ -538,7 +542,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				Buffer.width = globalBackBuffer.width;
 				Buffer.height = globalBackBuffer.height;
 				Buffer.pitch = globalBackBuffer.pitch;
-				GameUpdateAndRender(NewInput, &Buffer, &SoundBuffer);
+				GameUpdateAndRender(&GameMemory, NewInput, &Buffer, &SoundBuffer);
 				//WIN32RenderWeirdGradinent(&globalBackBuffer, xOffset, yOffset);
 
 				// NOTE: Direct sound output test
