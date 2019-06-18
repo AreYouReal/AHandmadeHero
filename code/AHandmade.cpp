@@ -52,9 +52,6 @@ void GameUpdateAndRender(game_memory* GameMemory, game_input* Input, game_offscr
 	game_state* GameState = (game_state*)GameMemory->PermanentStorage;
 	if(!GameMemory->IsInitialized){
 		GameState->ToneHz 		= 256;
-		GameState->GreenOffset 	= 0;
-		GameState->BlueOffset 	= 0;
-		
 		GameMemory->IsInitialized = true;
 	}
 
