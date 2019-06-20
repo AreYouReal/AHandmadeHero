@@ -67,6 +67,68 @@ static x_input_set_state* XInputSetState_ = XInputSetStateStub;
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND* ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
+static debug_read_file_result
+DEBUGPlatformReadEntireFile(char* Filename){
+	debug_read_file_result Result = {};
+
+	HANDLE FileHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, 0);
+	if(FileHandle != INVALID_HANDLE_VALUE){
+		LARGE_INTEGER FileSize;
+		if(GetFileSizeEx(FileHandle, &FileSize)){
+			uint32_t FileSize32 = SafeTruncateUInt64(FileSize.QuadPart);
+			Result.Contents =  VirtualAlloc(0, FileSize32, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+			if(Result.Contents){
+				DWORD BytesRead;
+				if(ReadFile(FileHandle, Result.Contents, FileSize32, &BytesRead, 0) && (FileSize32 == BytesRead)) {
+					// NORE: File read success
+					Result.ContentsSize = BytesRead;
+
+				}else{
+					DEBUGPlatformFreeFileMemory(Result.Contents);
+					Result.Contents = 0;
+				}
+			}else{
+				// TODO: Logging
+			}
+
+		}else{
+			// TODO: Logging
+		}
+		CloseHandle(FileHandle);
+	}else{
+		// TODO: Logging
+	}
+	return(Result);
+}
+
+static void 
+DEBUGPlatformFreeFileMemory(void *Memory){
+	if (Memory) {
+		VirtualFree(Memory, 0, MEM_RELEASE);
+	}
+}
+
+static bool 
+DEBUGPlatformWriteEntireFile(char* Filename, uint32_t MemorySize, void* Memory){
+	bool Result = false;
+
+	HANDLE FileHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+	if(FileHandle != INVALID_HANDLE_VALUE){
+		DWORD BytesWritten;
+		if(WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0)){
+			Result = (MemorySize == BytesWritten);
+		}else{
+			// TODO: Logging
+		}
+		CloseHandle(FileHandle);
+	}else{
+		// TODO: Logging
+	}
+
+	return(Result);
+}
+
+
 static void 
 Win32LoadXInput() {
 	// TODO: Test this on windows 8
@@ -418,13 +480,20 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 			// TODO: Pool with bitmap VirtualAlloc
 			int16_t* Samples = (int16_t*)VirtualAlloc(0, SoundOutput.SecondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
+#if HANDMADE_INTERNAL
+			LPVOID BaseAddress = (LPVOID)Terabytes(2);
+#else
+			LPVOID BaseAddress = 0;
+#endif
+
 			game_memory GameMemory = {};
 			GameMemory.PermanentStorageSize = Megabytes(64);
-			GameMemory.PermanentStorage = VirtualAlloc(0, GameMemory.PermanentStorageSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+			GameMemory.TransientStorageSize = Gigabytes(4);
 
-			GameMemory.TransientStorageSize = Gigabytes((uint64_t)4);
-			GameMemory.TransientStorage = VirtualAlloc(0, GameMemory.TransientStorageSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
+			// TODO: Handle various memory footprint (Using System Metrics)
+			uint64_t TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
+			GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, TotalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+			GameMemory.TransientStorage = ((uint8_t*)GameMemory.PermanentStorage + GameMemory.PermanentStorageSize);
 
 			if(Samples && GameMemory.PermanentStorage && GameMemory.TransientStorage){
 

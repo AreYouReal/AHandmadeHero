@@ -2,18 +2,54 @@
 
 #include <stdint.h>
 
-// TODO: Swap, min, max ... MACROS???
+/*
+// NOTE: 
+	HANDMADE_INTERNAL:
+		0 - for public release
+		1 - build for developer only
 
+	HANDMADE_SLOW:
+		0 - Not slow code allowed!
+		1 - slow code welcome
+ */
 
-#define Kilobytes(Value) ((Value) * 1024)
-#define Megabytes(Value) (Kilobytes(Value) * 1024)
-#define Gigabytes(Value) (Megabytes(Value) * 1024)
+#if HANDMADE_SLOW
+// TODO: Complete assertion macro - don't worry everyone !
+#define Assert(Expression) if(!(Expression)){ * (int *) 0 = 0; }
+#else
+#define Assert(Expression)
+#endif
+
+#define Kilobytes(Value) ((Value) * 1024LL)
+#define Megabytes(Value) (Kilobytes(Value) * 1024LL)
+#define Gigabytes(Value) (Megabytes(Value) * 1024LL)
+#define Terabytes(Value) (Gigabytes(Value) * 1024LL)
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+// TODO: Swap, min, max ... MACROS???
+
+inline uint32_t 
+SafeTruncateUInt64(uint64_t Value){
+	// TODO: Defines for maximum values
+	Assert(Value <= 0xFFFFFFFF);
+	uint32_t Result = (uint32_t)Value;
+	return(Result);
+}
 
 /*
 	TODO: Services that the platform layer provides to the game
 */
+
+#if HANDMADE_INTERNAL
+struct debug_read_file_result{
+	uint32_t 	ContentsSize;
+	void* 		Contents;
+};
+
+static debug_read_file_result 	DEBUGPlatformReadEntireFile(char* FileName);
+static void 					DEBUGPlatformFreeFileMemory(void *Memory);
+static bool 					DEBUGPlatformWriteEntireFile(char* FileName, uint32_t MemorySize, void* Memory);
+#endif
 
 /* 
 	NOTE: Services that the game provides to the platform layer
@@ -72,6 +108,7 @@ struct game_controller_input {
 };
 
 struct game_input {
+	// TODO: Insert clock values here.
 	game_controller_input Controllers[4];
 };
 
