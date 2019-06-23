@@ -33,8 +33,8 @@ RenderWeirdGradinent(game_offscreen_buffer* Buffer, int BlueOffset, int GreenOff
 				LITTLE ENDIAN: 0x xxBBGGRR
 				BIG ENDIAN: 0x RRGGBBxx
 			*/
-			uint8_t blue = x + BlueOffset;
-			uint8_t green = y + GreenOffset;
+			uint8_t blue = uint8_t(x + BlueOffset);
+			uint8_t green = uint8_t(y + GreenOffset);
 			/*
 				Memory: 	BB GG RR xx
 				Register:	xx RR GG BB (little endian)
