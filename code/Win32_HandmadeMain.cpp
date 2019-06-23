@@ -425,6 +425,92 @@ Win32ProcessXInputDigitalButton(DWORD XInputButtonState, game_button_state* OldS
 	Newstate->HalfTransitionCount = (OldState->EndedDown != Newstate->EndedDown) ? 1 : 0;
 }
 
+
+static void 
+Win32ProcessPendingMessages(game_controller_input* KeyboardController){
+
+	MSG Message;
+
+	while (PeekMessage(&Message, 0, 0, 0, PM_REMOVE)){
+
+		switch (Message.message){
+			case WM_QUIT:
+			GlobalRunning = false;
+			break;
+
+			case WM_SYSKEYDOWN:
+			case WM_SYSKEYUP:
+			case WM_KEYDOWN:
+			case WM_KEYUP:
+			{
+				uint32_t VKCode = (uint32_t)Message.wParam;
+
+				bool WasDown = ((Message.lParam & (1 << 30)) != 0);
+				bool IsDown = ((Message.lParam & (1 << 31)) == 0);
+
+				if (WasDown != IsDown)
+				{
+					if (VKCode == 'W')
+					{
+						OutputDebugStringA("W ");
+					}
+					else if (VKCode == 'A')
+					{
+					}
+					else if (VKCode == 'S')
+					{
+					}
+					else if (VKCode == 'D')
+					{
+					}
+					else if (VKCode == 'Q')
+					{
+						Win32ProcessKeyboardMessage(&KeyboardController->LeftShoulder, IsDown);
+					}
+					else if (VKCode == 'E')
+					{
+						Win32ProcessKeyboardMessage(&KeyboardController->RightShoulder, IsDown);
+					}
+					else if (VKCode == VK_UP)
+					{
+						Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
+					}
+					else if (VKCode == VK_LEFT)
+					{
+						Win32ProcessKeyboardMessage(&KeyboardController->Left, IsDown);
+					}
+					else if (VKCode == VK_DOWN)
+					{
+						Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
+					}
+					else if (VKCode == VK_RIGHT)
+					{
+						Win32ProcessKeyboardMessage(&KeyboardController->Right, IsDown);
+					}
+					else if (VKCode == VK_ESCAPE)
+					{
+						GlobalRunning = false;
+					}
+					else if (VKCode == VK_SPACE)
+					{
+					}
+					bool AltKeyWasDown = ((Message.lParam & (1 << 29)) != 0);
+					if (VKCode == VK_F4 && AltKeyWasDown)
+					{
+						GlobalRunning = false;
+					}
+				}
+			}
+			break;
+
+			default:
+				TranslateMessage(&Message);
+				DispatchMessage(&Message);
+			break;
+		}
+	}
+}
+
 int _stdcall
 WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int ShowCode) {
 	
@@ -509,74 +595,14 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 				for ever{
 					if (!GlobalRunning) { break; }
 
-					MSG Message;
-
 					game_controller_input* KeyboardController = &NewInput->Controllers[0];
 					// TODO: Zeroing macro
 					// TODO: We can't zero everything because the up/down state will be wrong!
 					game_controller_input ZeroController = {};
 					*KeyboardController = ZeroController;
 
-					while (PeekMessage(&Message, 0, 0, 0, PM_REMOVE)) {
-						if (Message.message == WM_QUIT) {
-							GlobalRunning = false;
-						}
-
-						switch (Message.message){
-							case WM_SYSKEYDOWN:
-							case WM_SYSKEYUP:
-							case WM_KEYDOWN:
-							case WM_KEYUP:
-								{
-								uint32_t VKCode = (uint32_t)Message.wParam;
-
-								bool WasDown = ((Message.lParam & (1 << 30)) != 0);
-								bool IsDown = ((Message.lParam & (1 << 31)) == 0);
-
-								if (WasDown != IsDown) {
-									if (VKCode == 'W') {
-										OutputDebugStringA("W ");
-									} else if (VKCode == 'A') {
-
-									} else if (VKCode == 'S') {
-
-									} else if (VKCode == 'D') {
-
-									} else if (VKCode == 'Q') {
-										Win32ProcessKeyboardMessage(&KeyboardController->LeftShoulder, IsDown);
-									} else if (VKCode == 'E') {
-										Win32ProcessKeyboardMessage(&KeyboardController->RightShoulder, IsDown);
-									} else if (VKCode == VK_UP) {
-										Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
-									} else if (VKCode == VK_LEFT) {
-										Win32ProcessKeyboardMessage(&KeyboardController->Left, IsDown);
-									} else if (VKCode == VK_DOWN) {
-										Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
-									} else if (VKCode == VK_RIGHT) {
-										Win32ProcessKeyboardMessage(&KeyboardController->Right, IsDown);
-									} else if (VKCode == VK_ESCAPE) {
-										GlobalRunning = false;
-									} else if (VKCode == VK_SPACE) {
-									
-									}
-									bool AltKeyWasDown = ( (Message.lParam & (1 << 29)) != 0); 
-									if (VKCode == VK_F4 && AltKeyWasDown) {
-										GlobalRunning = false;
-									}
-								}
-								}
-							break;
-						
-							default:
-								TranslateMessage(&Message);
-								DispatchMessage(&Message);
-							break;
-						}
-
-
-
-					}
-
+					Win32ProcessPendingMessages(KeyboardController);
+					
 					// TODO: Should we pull this more frequently
 					DWORD MaxControllerCount = XUSER_MAX_COUNT;
 					if (MaxControllerCount > ArrayCount(NewInput->Controllers)) {
