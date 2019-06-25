@@ -428,7 +428,7 @@ Win32ProcessXInputDigitalButton(DWORD XInputButtonState, game_button_state* OldS
 
 static float
 Win32ProcessXInputStickValue(SHORT Value, SHORT DeadZoneThreshold){
-	return(Value < - DeadZoneThreshold ? (float)Value / 32768.0f : (Value > DeadZoneThreshold ? (float)Value / 32767.0f : 0));
+	return(Value < - DeadZoneThreshold ? (float)(Value + DeadZoneThreshold) / (32768.0f - DeadZoneThreshold) : (Value > DeadZoneThreshold ? (float)(Value - DeadZoneThreshold) / (32767.0f - DeadZoneThreshold) : 0));
 }
 
 static void 
@@ -610,8 +610,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 					game_controller_input* NewKeyboardController = GetController(NewInput, 0);
 					// TODO: Zeroing macro
 					// TODO: We can't zero everything because the up/down state will be wrong!
-					game_controller_input ZeroController = {};
-					*NewKeyboardController = ZeroController;
+					*NewKeyboardController = {};
 					NewKeyboardController->IsConnected = true;
 					for(int ButtonIndex = 0; ButtonIndex < ArrayCount(NewKeyboardController->Buttons); ++ButtonIndex){
 						NewKeyboardController->Buttons[ButtonIndex].EndedDown = OldKeyboardController->Buttons[ButtonIndex].EndedDown;
@@ -639,14 +638,33 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 							// TODO: See if ControllerState.dwPacketNUmber increments too rapidly
 							XINPUT_GAMEPAD* Pad = &controllerState.Gamepad;
 
-							NewController->IsAnalog = true;
+							// TODO: This is a square deadzone, check XInput to
+							// verify that the deadzone is "round" and show how to do
+							// round deadzone processing.
 							NewController->StickAverageX = Win32ProcessXInputStickValue(Pad->sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
 							NewController->StickAverageY = Win32ProcessXInputStickValue(Pad->sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
 
-							if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP){ NewController->StickAverageY = 1.0f; }
-							if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN){ NewController->StickAverageY = -1.0f; }
-							if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT){ NewController->StickAverageX = -1.0f; }
-							if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT){ NewController->StickAverageX = 1.0f; }
+							if(NewController->StickAverageX != 0.0f || NewController->StickAverageY != 0.0f){
+								NewController->IsAnalog = true;
+							}
+
+							if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP){ 
+								NewController->StickAverageY = 1.0f; 
+								NewController->IsAnalog = false;	
+							}
+
+							if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN){ 
+								NewController->StickAverageY = -1.0f; 
+								NewController->IsAnalog = false;	
+							}
+							if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT){ 
+								NewController->StickAverageX = -1.0f; 
+								NewController->IsAnalog = false;
+							}
+							if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT){ 
+								NewController->StickAverageX = 1.0f; 
+								NewController->IsAnalog = false;
+							}
 
 							float Threshold = 0.5f;
 							Win32ProcessXInputDigitalButton(NewController->StickAverageX > Threshold ? 1 : 0, &OldController->MoveRight, 1, &NewController->MoveRight);

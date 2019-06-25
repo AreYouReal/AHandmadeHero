@@ -97,7 +97,7 @@ struct game_controller_input {
 	float 	StickAverageY;
 
 	union {
-		game_button_state Buttons[10];
+		game_button_state Buttons[12];
 		struct {
 			game_button_state MoveUp;
 			game_button_state MoveDown;
@@ -114,6 +114,9 @@ struct game_controller_input {
 
 			game_button_state Back;
 			game_button_state Start;
+
+			// NOTE: All buttons must be added above this line
+			game_button_state Terminator;
 		};
 	};
 };
@@ -123,7 +126,7 @@ struct game_input {
 	game_controller_input Controllers[5];
 };
 
-inline game_controller_input *GetController(game_input* Input, int ControllerIndex){
+inline game_controller_input *GetController(game_input* Input, int unsigned ControllerIndex){
 	Assert(ControllerIndex < ArrayCount(Input->Controllers));
 	return(&Input->Controllers[ControllerIndex]);
 }
