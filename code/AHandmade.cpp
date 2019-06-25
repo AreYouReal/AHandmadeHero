@@ -65,18 +65,29 @@ void GameUpdateAndRender(game_memory* GameMemory, game_input* Input, game_offscr
 		GameMemory->IsInitialized 	= true;
 	}
 
-	game_controller_input* Input0 = &Input->Controllers[0];
-	if (Input0->IsAnalog) {
-		// TODO: Use analog movement tuning
-		GameState->BlueOffset += (int)(4.0f * (Input0->EndX));
-		GameState->ToneHz = 256 + (int)(128.0f * (Input0->EndY));
-	} else {
-		// TODO: Use digital movement tuning
+	for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex){
+		game_controller_input *Controller = GetController(Input, ControllerIndex);
+		if (Controller->IsAnalog){
+			// TODO: Use analog movement tuning
+			GameState->BlueOffset += (int)(4.0f * (Controller->StickAverageX));
+			GameState->ToneHz = 256 + (int)(128.0f * (Controller->StickAverageY));
+		} else {
+			if(Controller->MoveLeft.EndedDown){
+				GameState->BlueOffset -= 1;
+			}
+
+			if(Controller->MoveRight.EndedDown){
+				GameState->BlueOffset += 1;
+			}
+			// TODO: Use digital movement tuning
+		}
+
+		if (Controller->ActionDown.EndedDown){
+			++GameState->GreenOffset;
+		}
 	}
 
-	if (Input0->Down.EndedDown) {
-		++GameState->GreenOffset;
-	}
+
 
 
 
