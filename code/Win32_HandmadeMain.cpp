@@ -530,7 +530,7 @@ Win32GetWallClock(){
 }
 
 inline float
-GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End){
+Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End){
 	return((float)(End.QuadPart - Start.QuadPart) / (float)GlobalPerfCountFrequency);
 }
 
@@ -730,6 +730,8 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 						SoundIsValid = true;
 					}
 
+					// TODO: Sound is wrong now, because we haven't updated 
+					// it to go with th enew frame loop.
 					game_sound_output_buffer SoundBuffer = {};
 					SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
 					SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
@@ -743,24 +745,27 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 					GameUpdateAndRender(&GameMemory, NewInput, &Buffer, &SoundBuffer);
 					//WIN32RenderWeirdGradinent(&globalBackBuffer, xOffset, yOffset);
 
-					// NOTE: Direct sound output test
 
 					if (SoundIsValid) {
 						Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
 					}
 
 					LARGE_INTEGER WorkCounter = Win32GetWallClock();
-					float WorkSecondsElapsed = GetSecondsElapsed(LastCounter, WorkCounter);
+					float WorkSecondsElapsed = Win32GetSecondsElapsed(LastCounter, WorkCounter);
 					
 					// TODO: Not tested yet! Probably buggy!!!!
 					float SecondsElapsedForFrame = WorkSecondsElapsed;
 					if(SecondsElapsedForFrame < TargetSecondsElapsedPerFrame){
+						if(SleepIsGranular){
+							DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsElapsedPerFrame - SecondsElapsedForFrame));
+							if(SleepMS > 0){
+								Sleep(SleepMS);
+							}
+						}
+						float TestSecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
+						Assert(TestSecondsElapsedForFrame < TargetSecondsElapsedPerFrame);
 						while(SecondsElapsedForFrame < TargetSecondsElapsedPerFrame){
-							// if(SleepIsGranular){
-							// 	DWORD SleepMS = (DWORD)((TargetSecondsElapsedPerFrame - SecondsElapsedForFrame) * 1000.0f);
-							// 	Sleep(SleepMS);
-							// }
-							SecondsElapsedForFrame = GetSecondsElapsed(LastCounter, Win32GetWallClock());
+							SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
 						}
 					}else{
 						// TODO: MISSED FRAME RATE!
@@ -782,7 +787,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 
 					LARGE_INTEGER EndCounter = Win32GetWallClock(); 
 					
-					float MSPerFrame = 1000.0f * GetSecondsElapsed(LastCounter, EndCounter);
+					float MSPerFrame = 1000.0f * Win32GetSecondsElapsed(LastCounter, EndCounter);
 					LastCounter = EndCounter;
 
 					float FPS = 0.0f;
