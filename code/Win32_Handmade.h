@@ -9,6 +9,7 @@ struct win32_offscreen_buffer {
 	int			width;
 	int			height;
 	int			pitch;
+	int			BytesPerPixel;
 };
 
 struct win32_window_dimension {
@@ -20,7 +21,7 @@ struct win32_sound_output {
 	int		SamplesPerSecond;
 	uint32_t RunningSampleIndex;
 	int		BytesPerSample;
-	int		SecondaryBufferSize;
+	DWORD	SecondaryBufferSize;
 	real32	tSine;
 	int		LatencySampleCount;
 };
