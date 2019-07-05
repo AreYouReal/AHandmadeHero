@@ -25,3 +25,8 @@ struct win32_sound_output {
 	real32	tSine;
 	int		LatencySampleCount;
 };
+
+struct win32_debug_time_marker{
+	DWORD PlayCursor;
+	DWORD WriteCursor;
+};
