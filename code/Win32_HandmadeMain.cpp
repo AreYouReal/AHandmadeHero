@@ -844,7 +844,7 @@ WinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR commandLine, int Show
 					}
 
 #if HANDMADE_INTERNAL
-// NOTE: This is debug code
+					// NOTE: This is debug code
 					{
 						win32_debug_time_marker* Marker = &DebugTimeMarkers[DebugTimeMarkerIndex++];
 						if(DebugTimeMarkerIndex >= ArrayCount(DebugTimeMarkers)){
