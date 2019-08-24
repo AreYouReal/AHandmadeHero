@@ -138,13 +138,16 @@ struct game_memory{
 
 	uint64_t 	TransientStorageSize;
 	void*		TransientStorage;		// NOTE: Required to be cleared to zero at startup
-
-
 };
 
 // Three things - timing, Controller/keyboard input, bitmap buffer to use, sound buffer to use
-static void GameUpdateAndRender(game_memory *GameMemory, game_input* Input, game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer);
+static void GameUpdateAndRender(game_memory *GameMemory, game_input* Input, game_offscreen_buffer* Buffer);
 
+// NOTE: At the momnent it has to be a very fast functions,
+// it cannot be more thana milliseocnd or so
+// TODO: Refuce the pressure on this function's perfomance by measuring it
+// or asking about it, etc.
+static void GameGetSoundSamples(game_memory *GameMemory, game_sound_output_buffer* SoundBuffer);
 ////
 ///
 //

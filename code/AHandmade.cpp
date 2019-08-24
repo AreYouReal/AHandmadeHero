@@ -47,7 +47,8 @@ RenderWeirdGradinent(game_offscreen_buffer* Buffer, int BlueOffset, int GreenOff
 	}
 }
 
-void GameUpdateAndRender(game_memory* GameMemory, game_input* Input, game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer){
+static void 
+GameUpdateAndRender(game_memory* GameMemory, game_input* Input, game_offscreen_buffer* Buffer){
 	Assert( (&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0])  == (ArrayCount(Input->Controllers[0].Buttons)));
 	Assert(sizeof(game_state) <= GameMemory->PermanentStorageSize);
 
@@ -87,12 +88,14 @@ void GameUpdateAndRender(game_memory* GameMemory, game_input* Input, game_offscr
 		}
 	}
 
-
-
-
-
-
 	// TODO: Allow sample offsets here for more robust platform options
-	GameOutputSound(SoundBuffer, GameState->ToneHz);
+
 	RenderWeirdGradinent(Buffer, GameState->BlueOffset, GameState->GreenOffset);
+}
+
+
+static void 
+GameGetSoundSamples(game_memory *Memory, game_sound_output_buffer* SoundBuffer){
+	game_state *GameState = (game_state*)Memory->PermanentStorage;
+	GameOutputSound(SoundBuffer, GameState->ToneHz);
 }
